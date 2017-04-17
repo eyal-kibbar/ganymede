@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define TASK(_name, _cycle_ms, _setup_func, _loop_func, _stack_size)           \
+#define TASK(_name, _setup_func, _loop_func, _stack_size)           \
     struct {                                                                   \
         task_info_t info;                                                      \
         uint8_t stack[_stack_size - sizeof(task_info_t)];                      \
@@ -14,7 +14,6 @@
         {                                                                      \
             .magic = 0xBEEF,                                                   \
             .stack_size = _stack_size,                                         \
-            .cycle_ms = _cycle_ms,                                             \
             .setup_func = _setup_func,                                         \
             .loop_func = _loop_func,                                           \
         }                                                                      \
@@ -36,7 +35,6 @@ typedef struct task_info_s
 
         void* next;
     };
-    uint16_t cycle_ms;
     void (*setup_func)(void);
     void (*loop_func)(void);
 }
@@ -47,10 +45,12 @@ void semaphore_init(semaphore_t* sem, uint8_t counter);
 void semaphore_wait(semaphore_t* sem);
 void semaphore_signal(semaphore_t* sem);
 uint8_t sched_self(void);
-void sched_set_cycle(uint8_t tid, uint16_t ms);
-uint32_t sched_millis(void);
 void sched_delay(uint16_t ms);
 
+
+uint16_t timer_get_ticks(void);
+uint16_t timer_ms2ticks(uint16_t ms, uint16_t* remaining_us);
+uint16_t timer_ticks2ms(uint16_t ticks);
 
 #endif /* GANYMEDE_H_ */
 

@@ -1,4 +1,4 @@
-#include "uart.h"
+#include "drv/uart.h"
 #include "uart_drv.h"
 #include "uart_platform.h"
 

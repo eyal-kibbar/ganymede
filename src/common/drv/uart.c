@@ -1,10 +1,7 @@
-#include "platform.h"
+#include "ganymede_platform.h"
 #include "uart_drv.h"
 #include "uart_platform.h"
 #include "ring.h"
-
-#define UART_TX_BUFF_LEN 16
-#define UART_RX_BUFF_LEN 16
 
 typedef struct uart_s {
     ring_t tx_ring;

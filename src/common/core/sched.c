@@ -1,7 +1,7 @@
 #include "sched.h"
 #include "kern.h"
 #include "ganymede.h"
-#include "platform.h"
+#include "ganymede_platform.h"
 #include "timer.h"
 
 #include <stdint.h>
@@ -18,6 +18,13 @@
 #define LOG_SCHED(fmt, ...)
 #endif
 
+#define CANARY_MAGIC 0xDEAD
+
+#ifdef CANARY
+#define CANARY_CHECK() LOG_ASSERT(sched.curr->canary == CANARY_MAGIC, "dead canary: %p", sched.curr)
+#else /* CANARY */
+#define CANARY_CHECK()
+#endif /* CANARY */
 
 typedef enum task_state_e {
     TASK_STATE_RUNNING,
@@ -29,7 +36,6 @@ typedef enum task_state_e {
 
 typedef struct task_s {
     task_info_t info;
-    jmp_buf* p_env;
     uint8_t tid;
     task_state state;
     union
@@ -46,6 +52,12 @@ typedef struct task_s {
         }
         delayed;
     };
+
+    uint8_t ctx[SCHED_CONTEXT_SIZE];
+
+#ifdef CANARY
+    uint16_t canary;
+#endif /* CANARY */
 }
 task_t;
 
@@ -60,70 +72,25 @@ static sched_t sched;
 
 static void sched_task_switch(task_t* next)
 {
-    jmp_buf env;
-    sched.curr->p_env = &env;
+    task_t* prev = sched.curr;
 
-    if (0 == setjmp(*(sched.curr->p_env))) {
-        sched.curr = next;
-        sched.curr->state = TASK_STATE_RUNNING;
-        longjmp(*next->p_env, 1);
-    }
+    CANARY_CHECK();
+
+    sched.curr = next;
+    sched.curr->state = TASK_STATE_RUNNING;
+
+    CANARY_CHECK();
+
+    platform_context_swap((sched_context_t)prev->ctx, (sched_context_t)next->ctx);
 }
 
 __attribute__((noreturn))
 static void task_start(void)
 {
-    uint16_t next_tick;
-    uint16_t us;
-    uint16_t carry_us;
-    uint16_t now;
-
-    next_tick = timer_get_ticks();
-    carry_us = 0;
+    LOG_INFO(SCHED, "first time");
 
     while (1) {
         sched.curr->info.loop_func();
-
-        if (sched.curr->info.cycle_ms == 0) {
-            next_tick = timer_get_ticks();
-            carry_us = 0;
-            continue;
-        }
-
-        next_tick += timer_ms2ticks(sched.curr->info.cycle_ms, &us);
-        carry_us += us;
-        next_tick += timer_ms2ticks(carry_us / 1000, &us);
-        carry_us = (carry_us % 1000) + us;
-
-        // check if we are falling behind
-        now = timer_get_ticks();
-
-        LOG_SCHED("carry us %u %04x %04x\n\r", carry_us, now, next_tick);
-
-        if ((next_tick ^ now) & 0x8000) {
-            uint16_t epoch = now & 0x8000;
-
-            now &= ~0x8000;
-            next_tick &= ~0x8000;
-
-            if (next_tick > now && (0x7FFF - next_tick + now) < TIMER_MAX_DELAY_TICKS) {
-                next_tick = now | epoch;
-                carry_us = 0;
-                LOG_SCHED("falling behind epoch: %04x\n\r", next_tick);
-            }
-
-        }
-        else if (next_tick < now) {
-            next_tick = now;
-            carry_us = 0;
-            LOG_SCHED("falling behind: %04x\n\r", next_tick);
-        }
-
-        sched.curr->delayed.end_tick = next_tick;
-        platform_cli();
-        sched.curr->state = TASK_STATE_DELAYED;
-        sched_task_switch(&sched.scheduler);
-        platform_sei();
     }
 }
 
@@ -131,7 +98,6 @@ __attribute__((optimize("Os")))
 void sched_init(void)
 {
     task_t* task;
-    uint8_t* sp;
     uint8_t tid = 0;
     extern char __tasks_end[];
     extern char __tasks_start[];
@@ -143,28 +109,27 @@ void sched_init(void)
 
     for (task = sched.first; task; task = (task_t*)task->info.next) {
 
+        platform_context_create((sched_context_t)task->ctx, task_start, (void*)task, (size_t)task->info.stack_size);
+
         task->info.next = (void*)((uintptr_t)task + (uintptr_t)task->info.stack_size);
 
-        //LOG_INFO(SCHED, "task %p\n\r", task);
         task->tid = ++tid;
         task->info.setup_func();
 
         task->state = TASK_STATE_IDLE;
 
-        sp = (uint8_t*)((uintptr_t)task->info.next - sizeof(uintptr_t));
-        task->p_env = (jmp_buf*)(sp - sizeof(jmp_buf));
-
-        if (0 != setjmp(*task->p_env)) {
-            task_start();
-            // Should never return
-        }
-
-        platform_set_sp(*task->p_env, sp);
-
         if (task->info.next == __tasks_end){
             task->info.next = NULL;
         }
+
+#ifdef CANARY
+        task->canary = CANARY_MAGIC;
+#endif /* CANARY */
     }
+
+#ifdef CANARY
+        sched.scheduler.canary = CANARY_MAGIC;
+#endif /* CANARY */
 
     sched.curr = &sched.scheduler;
     sched.curr->state = TASK_STATE_RUNNING;
@@ -291,18 +256,5 @@ void semaphore_signal(semaphore_t* sem)
 uint8_t sched_self(void)
 {
     return sched.curr->tid;
-}
-
-void sched_set_cycle(uint8_t tid, uint16_t ms)
-{
-    task_t* task;
-    for (task = sched.first; task; task = (task_t*)task->info.next) {
-        if (task->tid != tid) {
-            continue;
-        }
-
-        task->info.cycle_ms = ms;
-        return;
-    }
 }
 

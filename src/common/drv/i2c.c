@@ -1,4 +1,4 @@
-#include "platform.h"
+#include "ganymede_platform.h"
 #include "i2c_platform.h"
 #include "i2c_drv.h"
 #include "i2c.h"

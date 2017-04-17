@@ -4,13 +4,13 @@
 
 #ifdef LOG_ENABLED
 
-#include "platform.h"
+#include "log_platform.h"
 
 #define LOG_PRINT(prefix, module, fmt, ...) \
     __LOG_PRINT(prefix, module, fmt, ##__VA_ARGS__)
 
-#define LOG_ASSERT(prefix, fmt, ...) \
-    __LOG_ASSERT(prefix, fmt, ##__VA_ARGS__)
+#define LOG_ASSERT(condition, fmt, ...) \
+    __LOG_ASSERT(condition, fmt, ##__VA_ARGS__)
 
 #else /* ! LOG_ENABLED */
 
@@ -31,7 +31,13 @@
     LOG_PRINT("WARNING: ", #module, fmt, ##__VA_ARGS__)
 
 
+typedef enum log_mode_e {
+    LOG_MODE_SYNC,
+    LOG_MODE_ASYNC
+} log_mode_t;
+
 void log_init(void);
 
+void log_set_mode(log_mode_t mode);
 
 #endif /* LOG_H */

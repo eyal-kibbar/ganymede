@@ -2,14 +2,12 @@
 #include "ganymede.h"
 #include "sched.h"
 #include "timer.h"
-#include "platform.h"
+#include "ganymede_platform.h"
 
 #include "uart_drv.h"
 #include "log.h"
-#include "uart.h"
+#include "drv/uart.h"
 #include <stdio.h>
-
-#include <avr/io.h>
 
 
 __attribute__((optimize("Os")))
@@ -21,12 +19,14 @@ int main()
     log_init();
     timer_init();
 
+    LOG_INFO(KERN, "ganymede initialized !");
+
     sched_init();
 
     wd_init();
+
+    log_set_mode(LOG_MODE_ASYNC);
     platform_sei();
-
-
 
     while (1) {
         sched_loop();

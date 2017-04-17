@@ -18,7 +18,7 @@ DIR_SRCS     := \
 DIR_INCS := \
 	$(DIR_MODULE)/inc \
 	$(DIR_MODULE)/api \
-	$(DIR_MODULE)/api/drv
+	$(DIR_MODULE)/api/platform/$(PLATFORM)
 
 DIR_EXTERNAL_INCS :=
 
@@ -29,9 +29,12 @@ DIR_EXTERNAL_INCS :=
 ifeq ($(FLAVOR), debug)
 	CFLAGS_$(MODULE_NAME)_debug := -O0
 	CONFIG_debug := \
-		LOGGING \
+		LOG_ENABLED \
 		DRV_UART_ENABLED \
-		DRV_UART_BAUDRATE=9600
+		DRV_UART_BAUDRATE=9600 \
+		UART_TX_BUFF_LEN=16 \
+		UART_RX_BUFF_LEN=16 \
+		CANARY
 
 else ifeq ($(FLAVOR), release)
 	CFLAGS_$(MODULE_NAME)_release := -Ofast
@@ -56,7 +59,7 @@ OBJS := \
 	sched.o \
 	ring.o
 
-ifneq ($(filter LOGGING, $(CONFIG_$(FLAVOR))), )
+ifneq ($(filter LOG_ENABLED, $(CONFIG_$(FLAVOR))), )
 	OBJS += log.o
 endif
 

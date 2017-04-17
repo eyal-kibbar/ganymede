@@ -1,5 +1,5 @@
 #include "ring.h"
-#include "platform.h"
+#include "ganymede_platform.h"
 
 void ring_init(ring_t* ring, uint8_t* buff, uint16_t buff_sz)
 {
