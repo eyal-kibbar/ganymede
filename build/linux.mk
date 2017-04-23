@@ -23,7 +23,7 @@ DIR_INCS += \
 OBJS += ganymede_platform.o
 
 ifneq ($(filter DRV_UART_ENABLED, $(CONFIG_$(FLAVOR))), )
-	OBJS += 
+	OBJS += uart_platform.o
 endif
 
 

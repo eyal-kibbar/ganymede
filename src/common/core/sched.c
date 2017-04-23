@@ -87,6 +87,8 @@ static void sched_task_switch(task_t* next)
 __attribute__((noreturn))
 static void task_start(void)
 {
+	platform_sei();
+
     LOG_INFO(SCHED, "first time");
 
     while (1) {
@@ -109,7 +111,10 @@ void sched_init(void)
 
     for (task = sched.first; task; task = (task_t*)task->info.next) {
 
-        platform_context_create((sched_context_t)task->ctx, task_start, (void*)task, (size_t)task->info.stack_size);
+        platform_context_create((sched_context_t)task->ctx,
+				task_start,
+				(void*)((uint8_t*)task + sizeof(task_t)),
+				(size_t)task->info.stack_size - sizeof(task_t));
 
         task->info.next = (void*)((uintptr_t)task + (uintptr_t)task->info.stack_size);
 

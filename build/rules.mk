@@ -30,6 +30,7 @@ ifeq ($(FLAVOR), debug)
 	CFLAGS_$(MODULE_NAME)_debug := -O0
 	CONFIG_debug := \
 		LOG_ENABLED \
+		LOG_ASYNC \
 		DRV_UART_ENABLED \
 		DRV_UART_BAUDRATE=9600 \
 		UART_TX_BUFF_LEN=16 \
@@ -38,7 +39,11 @@ ifeq ($(FLAVOR), debug)
 
 else ifeq ($(FLAVOR), release)
 	CFLAGS_$(MODULE_NAME)_release := -Ofast
-	CONFIG_release :=
+	CONFIG_release := \
+		DRV_UART_ENABLED \
+		DRV_UART_BAUDRATE=9600 \
+		UART_TX_BUFF_LEN=16 \
+		UART_RX_BUFF_LEN=16
 
 else
 $(error FLAVOR "$(FLAVOR)" not supported)

@@ -13,6 +13,8 @@
 __attribute__((optimize("Os")))
 int main()
 {
+	platform_init();
+
     platform_cli();
 
     uart_init();
@@ -25,7 +27,10 @@ int main()
 
     wd_init();
 
+#ifdef LOG_ASYNC
     log_set_mode(LOG_MODE_ASYNC);
+#endif /* LOG_ASYNC */
+
     platform_sei();
 
     while (1) {

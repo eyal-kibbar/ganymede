@@ -94,16 +94,32 @@ static int log_uart_async_getchar(FILE *stream)
     return (int)c;
 }
 
-FILE log_uart_sync_stream = FDEV_SETUP_STREAM(
+static FILE log_uart_sync_stream = FDEV_SETUP_STREAM(
     log_uart_sync_putchar,
     log_uart_sync_getchar,
     _FDEV_SETUP_RW);
 
-FILE log_uart_async_stream = FDEV_SETUP_STREAM(
+static FILE log_uart_async_stream = FDEV_SETUP_STREAM(
     log_uart_async_putchar,
     log_uart_async_getchar,
     _FDEV_SETUP_RW);
 
+void log_set_mode(log_mode_t mode)
+{
+    switch (mode) {
+    case LOG_MODE_SYNC:
+        stdout = &log_uart_sync_stream;
+        stdin = &log_uart_sync_stream;
+        break;
+    case LOG_MODE_ASYNC:
+        stdout = &log_uart_async_stream;
+        stdin = &log_uart_async_stream;
+        break;
+    default:
+         break;
+    }
+
+}
 
 /******************************************************************************/
 /** timer                                                                    **/
